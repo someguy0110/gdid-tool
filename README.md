@@ -18,6 +18,8 @@
   <br/>
 </div>
 
+> ⚠️ <strong>WARNING: PRESENT - WORK IN PROGRESS.</strong> This tool has not been fully tested yet. Use at your own risk. The API hook mode (gdid-hook-dll) is unfinished - reference only. See [disclaimer at bottom](#disclaimer).
+
 ---
 
 ## 📋 Overview
@@ -249,7 +251,6 @@ msbuild gdid-hook.vcxproj /p:Configuration=Release /p:Platform=x64
 - *United States v. Peter Stokes*, N.D. Ill., July 2026 — The DOJ complaint that first named GDID publicly
 
 ---
-
 <div align="center">
   <br/>
   <sub>
@@ -259,3 +260,13 @@ msbuild gdid-hook.vcxproj /p:Configuration=Release /p:Platform=x64
   <br/>
   <br/>
 </div>
+
+---
+
+## 🔥 Disclaimer <a name="disclaimer"></a>
+
+> **WARNING:** This tool is provided **as-is**, without any warranty, express or implied. Use at your own risk. The author(s) are not responsible for any damages, loss of data, or other problems resulting from the use or misuse of this software.
+
+This project intended solely for educational and defensive purposes - enabling device owners to understand and control the telemetry data their own machines generate. It is not intended for use in illegal activities or to bypass legitimate security measures. You are responsible for complying with all applicable lows and regulations in your jurisdiction.
+
+This project is a work in progress. The API hook mode (gdid-hook-dll) is unfinished - reference only. No guarantees of functionality or effectiveness are made.
