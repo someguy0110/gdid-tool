@@ -1,0 +1,13 @@
+{
+    "rotationMode":     "perBoot",
+    "timedIntervalMin": 30,
+    "blockDDS":         true,
+    "blockActivity":    true,
+    "blockCDP":         false,
+    "killPhoneLink":    false,
+    "killOneDrive":     false,
+    "killStore":        false,
+    "killTimeline":     false,
+    "hookMethod":       "registry",
+    "lastRotation":     null
+}
