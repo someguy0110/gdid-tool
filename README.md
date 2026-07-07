@@ -18,8 +18,6 @@
   <br/>
 </div>
 
-> ⚠️ <strong>WARNING: PRESENT - WORK IN PROGRESS.</strong> This tool has not been fully tested yet. Use at your own risk. The API hook mode (gdid-hook-dll) is unfinished - reference only. See [disclaimer at bottom](#disclaimer).
-
 ---
 
 ## 📋 Overview
@@ -222,18 +220,16 @@ Get-Service CDPSvc, CDPUserSvc | Format-Table Name, Status, StartType -AutoSize
 
 ## 💻 For Developers: API Hook Mode (Advanced)
 
-An optional DLL hook using [MinHook](https://github.com/TsudaKageyu/minhook) that intercepts `RegQueryValueExW` at the Win32 API layer. Instead of modifying registry values, it returns a spoofed value on read — the real GDID stays untouched.
+An optional DLL hook using [MinHook](https://github.com/TsudaKageyu/minhook) that intercepts `RegQueryValueExW` at the Win32 API layer. Instead of modifying registry values, it returns a spoofed value on read — the real GDID stays untouched. Build with `cmake -B build; cmake --build build`.
 
 ```powershell
 # Build
 cd gdid-hook-dll
-msbuild gdid-hook.vcxproj /p:Configuration=Release /p:Platform=x64
+cmake -B build && cmake --build build --config Release
 
 # Install via AppInit_DLLs
 # See gdid-hook-dll/README.md for instructions
 ```
-
-> ⚠️ **Warning:** `AppInit_DLLs` is widely flagged by AV/EDR products. Most users should stick with the default registry rotation mode.
 
 ---
 
@@ -267,6 +263,4 @@ msbuild gdid-hook.vcxproj /p:Configuration=Release /p:Platform=x64
 
 > **WARNING:** This tool is provided **as-is**, without any warranty, express or implied. Use at your own risk. The author(s) are not responsible for any damages, loss of data, or other problems resulting from the use or misuse of this software.
 
-This project intended solely for educational and defensive purposes - enabling device owners to understand and control the telemetry data their own machines generate. It is not intended for use in illegal activities or to bypass legitimate security measures. You are responsible for complying with all applicable lows and regulations in your jurisdiction.
-
-This project is a work in progress. The API hook mode (gdid-hook-dll) is unfinished - reference only. No guarantees of functionality or effectiveness are made.
+This project intended solely for educational and defensive purposes - enabling device owners to understand and control the telemetry data their own machines generate. It is not intended for use in illegal activities or to bypass legitimate security measures. You are responsible for complying with all applicable laws and regulations in your jurisdiction.
