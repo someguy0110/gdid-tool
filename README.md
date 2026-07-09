@@ -109,6 +109,13 @@ Then run (as Administrator):
 .\gdid-tool.ps1 install
 ```
 
+> **Quick fix — "There's nothing to open .ps1 with" / script won't run:**
+> This happens when you double-click the `.ps1` file (Windows doesn't associate `.ps1` with PowerShell) or when scripts are blocked by policy. Don't double-click. Open **PowerShell as Administrator**, then paste this one line (adjust the path):
+> ```powershell
+> powershell -ExecutionPolicy Bypass -File "C:\path\to\gdid-tool\gdid-tool.ps1" install
+> ```
+> This launches the script directly through PowerShell, bypassing both the file-association dialog and the execution-policy block.
+
 That's it. The tool will:
 1. Read your current GDID
 2. Generate and write a fake one
