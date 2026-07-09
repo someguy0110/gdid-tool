@@ -86,22 +86,22 @@ wlidsvc.dll  ──provision──→  login.live.com  ──assigns──→  6
 **Option A — Clone with Git (PowerShell or CMD):**
 
 ```powershell
-git clone https://github.com/someguy0110/gdid-tool.git
-cd gdid-tool
+git clone https://github.com/someguy0110/gdid-privacy.git
+cd gdid-privacy
 ```
 
 **Option B — Download the script only (no Git needed):**
 
 PowerShell:
 ```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/someguy0110/gdid-tool/main/gdid-tool.ps1" -OutFile "gdid-tool.ps1"
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/someguy0110/gdid-tool/main/gdid-config.json" -OutFile "gdid-config.json"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/someguy0110/gdid-privacy/main/gdid-tool.ps1" -OutFile "gdid-tool.ps1"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/someguy0110/gdid-privacy/main/gdid-config.json" -OutFile "gdid-config.json"
 ```
 
 CMD:
 ```cmd
-curl -LO https://raw.githubusercontent.com/someguy0110/gdid-tool/main/gdid-tool.ps1
-curl -LO https://raw.githubusercontent.com/someguy0110/gdid-tool/main/gdid-config.json
+curl -LO https://raw.githubusercontent.com/someguy0110/gdid-privacy/main/gdid-tool.ps1
+curl -LO https://raw.githubusercontent.com/someguy0110/gdid-privacy/main/gdid-config.json
 ```
 
 Then run (as Administrator):
@@ -144,7 +144,7 @@ gdid-tool.bat rotate
 ### 2. Standalone `.exe`
 Two ways to get `gdid-tool.exe`:
 
-- **Download (recommended):** grab `gdid-tool.exe` from the [Releases](https://github.com/someguy0110/gdid-tool/releases) page. Double-click it — it elevates and installs by default.
+- **Download (recommended):** grab `gdid-tool.exe` from the [Releases](https://github.com/someguy0110/gdid-privacy/releases) page. Double-click it — it elevates and installs by default.
 - **Build it yourself:** run `build-exe.ps1` (requires Windows + PowerShell, run as Administrator). It uses [ps2exe](https://github.com/MScholtes/PS2EXE) to compile the script:
   ```powershell
   .\build-exe.ps1
