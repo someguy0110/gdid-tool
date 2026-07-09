@@ -132,6 +132,44 @@ That's it. The tool will:
 
 ---
 
+## 🪟 Easy Options (No Terminal Needed)
+
+### 1. Double-click launcher (`.bat`)
+Just double-click **`gdid-tool.bat`**. It automatically asks for Administrator (UAC) and runs `install`. To use other commands, run it from a prompt or pass arguments:
+```cmd
+gdid-tool.bat status
+gdid-tool.bat rotate
+```
+
+### 2. Standalone `.exe`
+Two ways to get `gdid-tool.exe`:
+
+- **Download (recommended):** grab `gdid-tool.exe` from the [Releases](https://github.com/someguy0110/gdid-tool/releases) page. Double-click it — it elevates and installs by default.
+- **Build it yourself:** run `build-exe.ps1` (requires Windows + PowerShell, run as Administrator). It uses [ps2exe](https://github.com/MScholtes/PS2EXE) to compile the script:
+  ```powershell
+  .\build-exe.ps1
+  ```
+  The repo also builds the `.exe` automatically via GitHub Actions on every Release.
+
+> ⚠️ **Antivirus note:** `ps2exe` wrappers are sometimes flagged by AV because the same technique is abused by malware. The binary is safe and fully open-source (you can read `gdid-tool.ps1` yourself), but you may need to allow-list it. An unsigned `.exe` is more likely to be flagged than the `.ps1`.
+
+### 3. Runs automatically when your PC starts
+`install` already sets this up for you — it creates a Windows **scheduled task** called **`GDIDRotator`** that fires **AtStartup** (and on the rotation timer). Verify it:
+```powershell
+.\gdid-tool.ps1 status        # "Scheduled Task: GDIDRotator: Ready"
+Get-ScheduledTask -TaskName "GDIDRotator"
+```
+To see it visually: `taskschd.msc` → Task Scheduler Library → **GDIDRotator**.
+
+Alternative (manual) startup method — the **Startup folder**:
+1. Press `Win+R`, type `shell:startup`, Enter
+2. Put a shortcut to `gdid-tool.bat` (or `gdid-tool.exe`) there
+3. It launches on every login — but run `install` once as Administrator first so the changes persist
+
+> The scheduled-task method (the default) is better: it runs elevated at boot without a login, and rotates the GDID on the timer you configured.
+
+---
+
 ## 📖 Commands
 
 | Command | Description |
