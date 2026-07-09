@@ -61,12 +61,12 @@ wlidsvc.dll  ──provision──→  login.live.com  ──assigns──→  6
 ```
 
 | Detail | Value |
-|--------|--------|
+|--------|-------|
 | **Type** | 64-bit Device PUID (Passport Unique ID) |
 | **Prefix** | `0018` (device class), `0003` (user class) |
 | **Assigned by** | `login.live.com` during MSA provisioning (SOAP `<ps:DevicePUID>`) |
 | **Stored at** | `HKCU\SOFTWARE\Microsoft\IdentityCRL\ExtendedProperties\LID` |
-| **Also at** | `HKCU:\SOFTWARE\Microsoft\IdentityCRL\Immersive\production\Token\{GUID}\DeviceId` |
+| **Also at** | `HKCU\SOFTWARE\Microsoft\IdentityCRL\Immersive\production\Token\{GUID}\DeviceId` |
 | **Reported by** | Delivery Optimization as `UCDOStatus.GlobalDeviceId` |
 | **Persists** | Across Windows updates — changes only on **reinstall** |
 | **Local-only?** | **No** — CDP has an anonymous device path even without MSA login |
@@ -83,8 +83,29 @@ wlidsvc.dll  ──provision──→  login.live.com  ──assigns──→  6
 
 ### Install
 
+**Option A — Clone with Git (PowerShell or CMD):**
+
 ```powershell
-# Clone or download, then:
+git clone https://github.com/someguy0110/gdid-tool.git
+cd gdid-tool
+```
+
+**Option B — Download the script only (no Git needed):**
+
+PowerShell:
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/someguy0110/gdid-tool/main/gdid-tool.ps1" -OutFile "gdid-tool.ps1"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/someguy0110/gdid-tool/main/gdid-config.json" -OutFile "gdid-config.json"
+```
+
+CMD:
+```cmd
+curl -LO https://raw.githubusercontent.com/someguy0110/gdid-tool/main/gdid-tool.ps1
+curl -LO https://raw.githubusercontent.com/someguy0110/gdid-tool/main/gdid-config.json
+```
+
+Then run (as Administrator):
+```powershell
 .\gdid-tool.ps1 install
 ```
 
@@ -146,7 +167,7 @@ Toggle these to disable specific Microsoft services that use or depend on the GD
 | `killPhoneLink` | `false` | Phone Link (Your Phone) app |
 | `killOneDrive` | `false` | OneDrive file sync |
 | `killStore` | `false` | Microsoft Store auto-updates |
-| `killTimeline` | `false` | Activity history / Timeline |
+| `killTimeline` | `false` | Activity History / Timeline |
 | `blockCDP` | `false` | CDPSvc / CDPUserSvc entirely |
 
 ### Advanced
@@ -168,14 +189,14 @@ Toggle these to disable specific Microsoft services that use or depend on the GD
 
 # Apply changes
 .\gdid-tool.ps1 install
-b``
+```
 
 ---
 
 ## 🎯 What Gets Blocked
 
 | Feature | Collateral Damage |
-|---------|------------------|
+|---------|-------------------|
 | `blockDDS` | Cross-device clipboard, "Continue on PC", Nearby Share |
 | `blockCDP` | All of the above + any CDP-dependent apps |
 | `killPhoneLink` | Your Phone / Phone Link app stops working |
@@ -204,7 +225,7 @@ The server sees whatever fake ID the tool wrote — the change is local and prop
 (Get-ItemProperty 'HKCU:\SOFTWARE\Microsoft\IdentityCRL\ExtendedProperties').LID
 
 # Check firewall rules
-Get-NetFirewallRule | Where-Object DisplayName -like "*GDID"
+Get-NetFirewallRule | Where-Object DisplayName -like "*GDID*"
 
 # Check scheduled task
 Get-ScheduledTask -TaskName "GDIDRotator"
@@ -220,16 +241,18 @@ Get-Service CDPSvc, CDPUserSvc | Format-Table Name, Status, StartType -AutoSize
 
 ## 💻 For Developers: API Hook Mode (Advanced)
 
-An optional DLL hook using [MinHook](https://github.com/TsudaKageyu/minhook) that intercepts `RegQueryValueExW` at the Win32 API layer. Instead of modifying registry values, it returns a spoofed value on read — the real GDID stays untouched. Build with `cmake -B build; cmake --build build`.
+An optional DLL hook using [MinHook](https://github.com/TsudaKageyu/minhook) that intercepts `RegQueryValueExW` at the Win32 API layer. Instead of modifying registry values, it returns a spoofed value on read — the real GDID stays untouched.
 
 ```powershell
 # Build
 cd gdid-hook-dll
-cmake -B build && cmake --build build --config Release
+msbuild gdid-hook.vcxproj /p:Configuration=Release /p:Platform=x64
 
 # Install via AppInit_DLLs
 # See gdid-hook-dll/README.md for instructions
 ```
+
+> ⚠️ **Warning:** `AppInit_DLLs` is widely flagged by AV/EDR products. Most users should stick with the default registry rotation mode.
 
 ---
 
@@ -247,6 +270,7 @@ cmake -B build && cmake --build build --config Release
 - *United States v. Peter Stokes*, N.D. Ill., July 2026 — The DOJ complaint that first named GDID publicly
 
 ---
+
 <div align="center">
   <br/>
   <sub>
@@ -256,11 +280,3 @@ cmake -B build && cmake --build build --config Release
   <br/>
   <br/>
 </div>
-
----
-
-## 🔥 Disclaimer <a name="disclaimer"></a>
-
-> **WARNING:** This tool is provided **as-is**, without any warranty, express or implied. Use at your own risk. The author(s) are not responsible for any damages, loss of data, or other problems resulting from the use or misuse of this software.
-
-This project intended solely for educational and defensive purposes - enabling device owners to understand and control the telemetry data their own machines generate. It is not intended for use in illegal activities or to bypass legitimate security measures. You are responsible for complying with all applicable laws and regulations in your jurisdiction.
