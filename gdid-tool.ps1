@@ -61,7 +61,7 @@ function Get-Config {
     if (Test-Path $ConfigPath) {
         $c = Get-Content $ConfigPath -Raw | ConvertFrom-Json
         $merged = $DefaultConfig.Clone()
-        foreach ($k in $merged.Keys) {
+        foreach ($k in @($merged.Keys)) {
             if ($c.$k -ne $null) { $merged[$k] = $c.$k }
         }
         return $merged
@@ -117,11 +117,12 @@ function Get-CurrentGDID {
 
 function New-FakeGDID {
     # 64-bit random with 0018 prefix (Device PUID namespace)
-    $rand = [long]::MaxValue * [random]::NextDouble()
-    $rand = [math]::Abs($rand)
-    $hex = "0018{0:X12}" -f [long]$rand
-    if ($hex.Length -ne 16) { $hex = "0018" + "0" * (12 - ($hex.Length - 4)) + $hex.Substring(4) }
-    return $hex.Substring(0, 16)
+    $rng = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
+    $bytes = New-Object byte[] 6
+    $rng.GetBytes($bytes)
+    $val = [uint64]0
+    foreach ($b in $bytes) { $val = ($val -shl 8) -bor $b }
+    return "0018{0:X12}" -f $val
 }
 
 function Write-GDID($hex) {
@@ -161,9 +162,9 @@ function Restart-CDP {
 # ---------- Firewall ----------
 function Install-FirewallRules {
     $dsp = "GDID Privacy - Block DDS"
-    $rule = Get-NetFirewallRule -DisplayGroup $dsp -ErrorAction SilentlyContinue
+    $rule = Get-NetFirewallRule -Group $dsp -ErrorAction SilentlyContinue
     if (-not $rule) {
-        New-NetFirewallRule -DisplayName "Block DDS (dds.microsoft.com)" -DisplayGroup $dsp `
+        New-NetFirewallRule -DisplayName "Block DDS (dds.microsoft.com)" -Group $dsp `
             -Direction Outbound -Protocol TCP -RemotePort 443 -RemoteAddress "0.0.0.0/0" `
             -Action Block -Profile Any | Out-Null
         Write-Host "  [OK] Firewall group '$dsp' created" -ForegroundColor Green
@@ -174,7 +175,7 @@ function Install-FirewallRules {
 
 function Uninstall-FirewallRules {
     $dsp = "GDID Privacy - Block DDS"
-    Get-NetFirewallRule -DisplayGroup $dsp -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+    Get-NetFirewallRule -Group $dsp -ErrorAction SilentlyContinue | Remove-NetFirewallRule
     Write-Host "  [OK] Firewall rules removed" -ForegroundColor Green
 }
 
@@ -322,7 +323,7 @@ function Show-Status {
     }
 
     Write-Host "`n-- Firewall Rules --" -ForegroundColor Cyan
-    $rules = Get-NetFirewallRule -DisplayGroup "GDID Privacy - Block DDS" -ErrorAction SilentlyContinue
+    $rules = Get-NetFirewallRule -Group "GDID Privacy - Block DDS" -ErrorAction SilentlyContinue
     if ($rules) {
         $rules | ForEach-Object { Write-Host "  BLOCK: $($_.DisplayName)" -ForegroundColor Red }
     } else {
