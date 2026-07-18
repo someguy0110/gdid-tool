@@ -53,6 +53,8 @@ $DefaultConfig = @{
     killOneDrive      = $false
     killStore         = $false
     killTimeline      = $false
+    blockDO           = $false      # Disable Delivery Optimization service (DoSvc)
+    blockHosts        = $false      # Block via HOSTS file in addition to firewall
     hookMethod        = 'registry'   # registry | api | none
     lastRotation      = $null
 }
@@ -83,10 +85,21 @@ $DDSDomains = @(
     'dds.microsoft.com',
     'fd.dds.microsoft.com',
     'aad.cs.dds.microsoft.com',
-    'cdpcs.access.microsoft.com'
+    'cdpcs.access.microsoft.com',
+    'geo.prod.do.dsp.mp.microsoft.com'
 )
 
 $ActivityDomains = @(
+    'activity.windows.com',
+    'cdn.activity.windows.com'
+)
+
+$HostsDomains = @(
+    'dds.microsoft.com',
+    'fd.dds.microsoft.com',
+    'aad.cs.dds.microsoft.com',
+    'cdpcs.access.microsoft.com',
+    'geo.prod.do.dsp.mp.microsoft.com',
     'activity.windows.com',
     'cdn.activity.windows.com'
 )
@@ -189,6 +202,54 @@ function Uninstall-FirewallRules {
     Write-Host "  [OK] Firewall rules removed from group '$Group'" -ForegroundColor Green
 }
 
+# ---------- HOSTS file blocking ----------
+$HostsPath = "$env:SystemRoot\System32\drivers\etc\hosts"
+$HostsBeginMarker = "# GDID Privacy — begin"
+$HostsEndMarker   = "# GDID Privacy — end"
+
+function Install-HostsBlocks {
+    param([string[]]$Domains)
+
+    if (-not (Test-Path $HostsPath)) {
+        Write-Host "  [WARN] HOSTS file not found at $HostsPath" -ForegroundColor Yellow
+        return
+    }
+
+    $content = Get-Content $HostsPath -Raw -ErrorAction Stop
+    if ($content -match [regex]::Escape($HostsBeginMarker)) {
+        Write-Host "  [OK] HOSTS blocks already present — updating" -ForegroundColor Yellow
+        # Remove existing GDID block
+        $content = $content -replace "(?ms)$([regex]::Escape($HostsBeginMarker)).*?$([regex]::Escape($HostsEndMarker))", ""
+    }
+
+    $lines = @("", $HostsBeginMarker)
+    foreach ($d in $Domains) {
+        $lines += "0.0.0.0 $d"
+    }
+    $lines += $HostsEndMarker
+
+    # Trim trailing whitespace before appending
+    $content = $content.TrimEnd() + "`r`n" + ($lines -join "`r`n") + "`r`n"
+    Set-Content -Path $HostsPath -Value $content -Encoding ASCII -Force
+    Write-Host "  [OK] HOSTS file updated ($($Domains.Count) domains)" -ForegroundColor Green
+}
+
+function Uninstall-HostsBlocks {
+    if (-not (Test-Path $HostsPath)) { return }
+
+    $content = Get-Content $HostsPath -Raw -ErrorAction SilentlyContinue
+    if (-not $content) { return }
+
+    if ($content -match [regex]::Escape($HostsBeginMarker)) {
+        $content = $content -replace "(?ms)\r?\n?$([regex]::Escape($HostsBeginMarker)).*?$([regex]::Escape($HostsEndMarker))\r?\n?", ""
+        $content = $content.TrimEnd() + "`r`n"
+        Set-Content -Path $HostsPath -Value $content -Encoding ASCII -Force
+        Write-Host "  [OK] HOSTS blocks removed" -ForegroundColor Green
+    } else {
+        Write-Host "  [OK] No HOSTS blocks found" -ForegroundColor Yellow
+    }
+}
+
 # ---------- Scheduled task ----------
 function Install-RotationTask($cfg) {
     $taskName = "GDIDRotator"
@@ -277,6 +338,18 @@ function Install-FeatureKills($cfg) {
     if ($cfg.blockActivity) {
         Install-FirewallRules -Group "GDID Privacy - Block Activity" -Domains $ActivityDomains
     }
+
+    # Block Delivery Optimization service
+    if ($cfg.blockDO) {
+        Stop-Service DoSvc -Force -ErrorAction SilentlyContinue
+        Set-Service DoSvc -StartupType Disabled
+        Write-Host "  [OK] Delivery Optimization service (DoSvc) disabled" -ForegroundColor Green
+    }
+
+    # Block via HOSTS file
+    if ($cfg.blockHosts) {
+        Install-HostsBlocks -Domains $HostsDomains
+    }
 }
 
 function Uninstall-FeatureKills {
@@ -308,6 +381,13 @@ function Uninstall-FeatureKills {
 
     Uninstall-FirewallRules -Group "GDID Privacy - Block DDS"
     Uninstall-FirewallRules -Group "GDID Privacy - Block Activity"
+
+    # Restore Delivery Optimization
+    Set-Service DoSvc -StartupType Manual -ErrorAction SilentlyContinue
+    Write-Host "  [OK] DoSvc restored to Manual" -ForegroundColor Green
+
+    # Remove HOSTS blocks
+    Uninstall-HostsBlocks
 }
 
 # ---------- Subcommands ----------
@@ -327,7 +407,7 @@ function Show-Status {
     $cfg | Format-List | Out-String | Write-Host
 
     Write-Host "`n-- Services --" -ForegroundColor Cyan
-    @('CDPSvc', 'CDPUserSvc') | ForEach-Object {
+    @('CDPSvc', 'CDPUserSvc', 'DoSvc') | ForEach-Object {
         $svc = Get-Service $_ -ErrorAction SilentlyContinue
         if ($svc) {
             $status = if ($svc.Status -eq 'Running') { 'RUNNING' } else { $svc.Status }
@@ -374,6 +454,18 @@ function Show-Status {
         Write-Host "  $($c.name): ENABLED (default)" -ForegroundColor DarkGray
     }
 
+    Write-Host "`n-- HOSTS File --" -ForegroundColor Cyan
+    if (Test-Path $HostsPath) {
+        $hostsContent = Get-Content $HostsPath -Raw -ErrorAction SilentlyContinue
+        if ($hostsContent -and ($hostsContent -match [regex]::Escape($HostsBeginMarker))) {
+            Write-Host "  GDID blocks: INSTALLED" -ForegroundColor Green
+        } else {
+            Write-Host "  GDID blocks: None" -ForegroundColor DarkGray
+        }
+    } else {
+        Write-Host "  File not found" -ForegroundColor DarkGray
+    }
+
     Write-Host "`n-- CDP State Dir --" -ForegroundColor Cyan
     if (Test-Path $CDPStateDir) {
         $items = Get-ChildItem $CDPStateDir -ErrorAction SilentlyContinue
@@ -414,6 +506,14 @@ function Install-All {
     }
     if ($cfg.blockActivity) {
         Install-FirewallRules -Group "GDID Privacy - Block Activity" -Domains $ActivityDomains
+    }
+    if ($cfg.blockDO) {
+        Stop-Service DoSvc -Force -ErrorAction SilentlyContinue
+        Set-Service DoSvc -StartupType Disabled
+        Write-Host "  [OK] DoSvc disabled" -ForegroundColor Green
+    }
+    if ($cfg.blockHosts) {
+        Install-HostsBlocks -Domains $HostsDomains
     }
 
     # Install feature kills
@@ -485,6 +585,8 @@ Configuration keys (gdid-config.json):
   killOneDrive      true/false  Disable OneDrive sync
   killStore         true/false  Disable Store auto-update
   killTimeline      true/false  Disable Activity History/Timeline
+  blockDO           true/false  Disable Delivery Optimization service (DoSvc)
+  blockHosts        true/false  Block via HOSTS file (in addition to firewall)
   hookMethod        registry|api|none
 
 Examples:
