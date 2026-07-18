@@ -182,7 +182,9 @@ function Restart-CDP {
         }
     }
     if ($anySkipped) {
-        Write-Host "  [OK] Rotation complete. New GDID will take effect when CDP starts." -ForegroundColor Green
+        Write-Host "  [OK] Rotation complete. New GDID is written to registry (active immediately)." -ForegroundColor Green
+        Write-Host "       CDP services are disabled — cloud sync skipped. Remote services may" -ForegroundColor Yellow
+        Write-Host "       still see the old GDID until CDP next starts naturally." -ForegroundColor Yellow
     }
 }
 
