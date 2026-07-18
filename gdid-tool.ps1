@@ -83,7 +83,10 @@ $DDSDomains = @(
     'dds.microsoft.com',
     'fd.dds.microsoft.com',
     'aad.cs.dds.microsoft.com',
-    'cdpcs.access.microsoft.com',
+    'cdpcs.access.microsoft.com'
+)
+
+$ActivityDomains = @(
     'activity.windows.com',
     'cdn.activity.windows.com'
 )
@@ -161,22 +164,29 @@ function Restart-CDP {
 
 # ---------- Firewall ----------
 function Install-FirewallRules {
-    $dsp = "GDID Privacy - Block DDS"
-    $rule = Get-NetFirewallRule -Group $dsp -ErrorAction SilentlyContinue
-    if (-not $rule) {
-        New-NetFirewallRule -DisplayName "Block DDS (dds.microsoft.com)" -Group $dsp `
-            -Direction Outbound -Protocol TCP -RemotePort 443 -RemoteAddress "0.0.0.0/0" `
-            -Action Block -Profile Any | Out-Null
-        Write-Host "  [OK] Firewall group '$dsp' created" -ForegroundColor Green
-    } else {
-        Write-Host "  [OK] Firewall group already exists" -ForegroundColor Yellow
+    param(
+        [string]$Group,
+        [string[]]$Domains
+    )
+
+    foreach ($domain in $Domains) {
+        $displayName = "Block $domain"
+        $existing = Get-NetFirewallRule -DisplayName $displayName -Group $Group -ErrorAction SilentlyContinue
+        if (-not $existing) {
+            New-NetFirewallRule -DisplayName $displayName -Group $Group `
+                -Direction Outbound -Protocol TCP -RemotePort 443 `
+                -RemoteAddress "0.0.0.0/0" -Action Block -Profile Any | Out-Null
+            Write-Host "  [OK] Firewall rule '$displayName' created" -ForegroundColor Green
+        } else {
+            Write-Host "  [OK] Firewall rule '$displayName' already exists" -ForegroundColor Yellow
+        }
     }
 }
 
 function Uninstall-FirewallRules {
-    $dsp = "GDID Privacy - Block DDS"
-    Get-NetFirewallRule -Group $dsp -ErrorAction SilentlyContinue | Remove-NetFirewallRule
-    Write-Host "  [OK] Firewall rules removed" -ForegroundColor Green
+    param([string]$Group)
+    Get-NetFirewallRule -Group $Group -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+    Write-Host "  [OK] Firewall rules removed from group '$Group'" -ForegroundColor Green
 }
 
 # ---------- Scheduled task ----------
@@ -260,7 +270,12 @@ function Install-FeatureKills($cfg) {
 
     # Block DDS endpoints
     if ($cfg.blockDDS) {
-        Install-FirewallRules
+        Install-FirewallRules -Group "GDID Privacy - Block DDS" -Domains $DDSDomains
+    }
+
+    # Block Activity endpoints
+    if ($cfg.blockActivity) {
+        Install-FirewallRules -Group "GDID Privacy - Block Activity" -Domains $ActivityDomains
     }
 }
 
@@ -291,7 +306,8 @@ function Uninstall-FeatureKills {
         Set-Service $_.Name -StartupType Manual -ErrorAction SilentlyContinue
     }
 
-    Uninstall-FirewallRules
+    Uninstall-FirewallRules -Group "GDID Privacy - Block DDS"
+    Uninstall-FirewallRules -Group "GDID Privacy - Block Activity"
 }
 
 # ---------- Subcommands ----------
@@ -323,9 +339,11 @@ function Show-Status {
     }
 
     Write-Host "`n-- Firewall Rules --" -ForegroundColor Cyan
-    $rules = Get-NetFirewallRule -Group "GDID Privacy - Block DDS" -ErrorAction SilentlyContinue
-    if ($rules) {
-        $rules | ForEach-Object { Write-Host "  BLOCK: $($_.DisplayName)" -ForegroundColor Red }
+    $ddsRules = Get-NetFirewallRule -Group "GDID Privacy - Block DDS" -ErrorAction SilentlyContinue
+    $actRules = Get-NetFirewallRule -Group "GDID Privacy - Block Activity" -ErrorAction SilentlyContinue
+    $allRules = @($ddsRules) + @($actRules)
+    if ($allRules) {
+        $allRules | ForEach-Object { Write-Host "  BLOCK: $($_.DisplayName) (group: $($_.Group))" -ForegroundColor Red }
     } else {
         Write-Host "  None" -ForegroundColor DarkGray
     }
@@ -391,7 +409,12 @@ function Install-All {
     Invoke-Rotate
 
     # Install firewall rules if configured
-    Install-FirewallRules
+    if ($cfg.blockDDS) {
+        Install-FirewallRules -Group "GDID Privacy - Block DDS" -Domains $DDSDomains
+    }
+    if ($cfg.blockActivity) {
+        Install-FirewallRules -Group "GDID Privacy - Block Activity" -Domains $ActivityDomains
+    }
 
     # Install feature kills
     Install-FeatureKills $cfg
@@ -408,7 +431,8 @@ function Uninstall-All {
 
     Uninstall-RotationTask
     Uninstall-FeatureKills
-    Uninstall-FirewallRules
+    Uninstall-FirewallRules -Group "GDID Privacy - Block DDS"
+    Uninstall-FirewallRules -Group "GDID Privacy - Block Activity"
 
     Write-Host "  [OK] Restoring CDP service defaults..." -ForegroundColor Yellow
     Set-Service CDPSvc -StartupType Manual -ErrorAction SilentlyContinue
