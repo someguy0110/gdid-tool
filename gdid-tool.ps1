@@ -169,10 +169,21 @@ function Restart-CDP {
     Stop-Service CDPUserSvc -Force -ErrorAction SilentlyContinue
     Get-Service 'CDPUserSvc_*' -ErrorAction SilentlyContinue | Stop-Service -Force
     Start-Sleep 1
-    # Start CDPUserSvc first (depends on CDPSvc)
-    Get-Service 'CDPUserSvc_*' -ErrorAction SilentlyContinue | Start-Service -ErrorAction SilentlyContinue
-    Start-Service CDPUserSvc -ErrorAction SilentlyContinue
-    Start-Service CDPSvc -ErrorAction SilentlyContinue
+    # Only restart services that aren't intentionally disabled
+    $anySkipped = $false
+    $svcs = @(Get-Service 'CDPUserSvc_*' -ErrorAction SilentlyContinue) + @(Get-Service CDPUserSvc -ErrorAction SilentlyContinue) + @(Get-Service CDPSvc -ErrorAction SilentlyContinue)
+    foreach ($svc in $svcs) {
+        $startMode = (Get-CimInstance -ClassName Win32_Service -Filter "Name='$($svc.Name)'").StartMode
+        if ($startMode -eq 'Disabled') {
+            Write-Host "  [SKIP] $($svc.Name) is Disabled — not restarting" -ForegroundColor Yellow
+            $anySkipped = $true
+        } else {
+            Start-Service $svc.Name -ErrorAction SilentlyContinue
+        }
+    }
+    if ($anySkipped) {
+        Write-Host "  [OK] Rotation complete. New GDID will take effect when CDP starts." -ForegroundColor Green
+    }
 }
 
 # ---------- Firewall ----------
